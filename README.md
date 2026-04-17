@@ -50,12 +50,23 @@ regime-trader/
 └── README.md
 ```
 
-**requirements.txt dependencies:**
-`hmmlearn`, `alpaca-trade-api`,`alpaca-py`, `pandas`, `numpy`, `scipy`, `ta`(technical analysis library), `scikit-learn`, `pyyaml`, `python-dotenv`, `streamlit`, `websocket-client`, `schedule`, `rich`(for terminal dashboard)
+Set up requirements.txt with:
 
-Create settings.yaml with ALL parameters, grouped by section, with default and comments:
+- hmmlearn
+- alpaca-trade-api
+- alpaca-py
+- pandas, numpy, scipy
+- ta (technical analysis library)
+- scikit-learn
+- pyyaml
+- python-dotenv
+- websocket-client
+- schedule
+- rich (for terminal dashboard)
 
-- broker (paper_trading: true, symbols: [VOO, VTI, VT, SPYM, QQQM, VWO, HFGM, GOOGL, NVDA, AAPL, MSFT, AMZN, META, TSLA, AMD, GLD], timeframe: 1Day)
+Create settings.yaml with ALL parameters, grouped by section, with defaults and comments:
+
+- broker (paper_trading: true, symbols: [SPY, QQQ, AAPL, MSFT, AMZN, GOOGL, NVDA, META, TSLA, AMD], timeframe: 1Day)
 - hmm (n_candidates: [3, 4, 5, 6, 7], n_init: 10, covariance_type: full, min_train_bars: 252, stability_bars: 3, flicker_window: 20, flicker_threshold: 4, min_confidence: 0.55)
 - strategy (low_vol_allocation: 0.95, mid_vol_allocation_trend: 0.95, mid_vol_allocation_no_trend: 0.60, high_vol_allocation: 0.60, low_vol_leverage: 1.25, rebalance_threshold: 0.10, uncertainty_size_mult: 0.50)
 - risk (max_risk_per_trade: 0.01, max_exposure: 0.80, max_leverage: 1.25, max_single_position: 0.15, max_concurrent: 5, max_daily_trades: 20, daily_dd_reduce: 0.02, daily_dd_halt: 0.03, weekly_dd_reduce: 0.05, weekly_dd_halt: 0.07, max_dd_from_peak: 0.10)
