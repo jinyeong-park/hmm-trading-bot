@@ -6,6 +6,8 @@ A volatility-aware systematic trading system using Hidden Markov Models for regi
 
 ## Phase 1: Project Structure & Environment Setup
 
+Create a Python project called "regime-trader" with the following structure
+
 ```
 regime-trader/
 ├── config/
@@ -49,7 +51,7 @@ regime-trader/
 ```
 
 **requirements.txt dependencies:**
-`hmmlearn`, `alpaca-trade-api`,`alpaca-py`, `pandas`, `numpy`, `scipy`, `ta`, `scikit-learn`, `pyyaml`, `python-dotenv`, `streamlit`, `websocket-client`, `schedule`, `rich`
+`hmmlearn`, `alpaca-trade-api`,`alpaca-py`, `pandas`, `numpy`, `scipy`, `ta`(technical analysis library), `scikit-learn`, `pyyaml`, `python-dotenv`, `streamlit`, `websocket-client`, `schedule`, `rich`(for terminal dashboard)
 
 Create settings.yaml with ALL parameters, grouped by section, with default and comments:
 
@@ -198,7 +200,7 @@ Shorting was tested extensively in walk-forward backtesting and consistently des
 3. Short positions during rebounds wipe out crash gains
    The correct response to high volatility is REDUCING allocation, not reversing direction.
 
-# THREE STRATEGY CLASSES (based on volatility rank):
+### THREE STRATEGY CLASSES (based on volatility rank):
 
 1. **LowVolBullStrategy** (lowest third of regimes by expected_volatility):
    - Direction: LONG
@@ -222,7 +224,7 @@ Shorting was tested extensively in walk-forward backtesting and consistently des
 
 ---
 
-# VOLATILITY RANK MAPPING:
+### VOLATILITY RANK MAPPING:
 
 For any regime count (3-7), map each regime's vol rank to a strategy:  
 position = rank / (n_regimes - 1) # 0.0 = lowest vol, 1.0 = highest  
@@ -232,7 +234,7 @@ else → MidVolCautiousStrategy
 
 ---
 
-# STRATEGY ORCHESTRATOR:
+### STRATEGY ORCHESTRATOR:
 
 - Takes regime_infos from HMM
 - Sorts by expected_volatility (ascending) to compute vol_rank per regime
