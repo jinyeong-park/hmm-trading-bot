@@ -16,7 +16,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from broker.alpaca_client import AlpacaClient
-from broker.order_executor import Order, OrderExecutor, OrderStatus
+from broker.order_executor import Order, OrderExecutor, OrderStatus, _compute_qty
 from core.hmm_engine import Regime, RegimeResult
 from core.risk_manager import RiskAction, RiskCheckResult
 from core.regime_strategies import AllocationDecision
@@ -59,8 +59,9 @@ class TestExecuteSignal:
         client = MagicMock(spec=AlpacaClient)
         executor = OrderExecutor(client)
         signal = _make_hold_signal()
-        with pytest.raises(NotImplementedError):
-            executor.execute_signal(signal, equity=100_000)
+        # HOLD action → execute_signal must return None without placing an order
+        result = executor.execute_signal(signal, equity=100_000)
+        assert result is None
 
     def test_buy_signal_submits_order(self):
         pytest.skip("Requires implementation")
@@ -71,10 +72,9 @@ class TestExecuteSignal:
 
 class TestQtyComputation:
     def test_qty_proportional_to_weight(self):
-        client = MagicMock(spec=AlpacaClient)
-        executor = OrderExecutor(client)
-        with pytest.raises(NotImplementedError):
-            executor._compute_qty(weight=0.10, price=500.0, equity=100_000)
+        # weight=0.10, price=500, equity=100_000 → notional=10_000 → shares=20.0
+        qty = _compute_qty(weight=0.10, price=500.0, equity=100_000)
+        assert qty == pytest.approx(20.0)
 
     def test_qty_zero_when_weight_zero(self):
         pytest.skip("Requires implementation")

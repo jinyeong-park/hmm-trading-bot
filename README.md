@@ -484,6 +484,16 @@ Implement the broker/ package.
 - get_latest_bar(), get_latest_quote(), get_snapshot()
 - Handle gaps (weekends, holidays, halts) gracefully
 
+--- after implementation, quick check ---
+
+Confirm API to alpaca is connected
+
+Base url is https://paper-api.alpaca.markets/v2
+
+place a trade for NVIDIA as a test
+
+---
+
 # PHASE 7: Main Loop & Orchestration
 
 Implement main.py.
