@@ -584,6 +584,12 @@ Refresh every 5 seconds. Color-coded risk bars.
 - Delivery: console, log file, email (optional), webhook (optional)
 - Rate limit: 1 per event type per 15 minutes
 
+---
+
+install dependencies and run streamlit dashboard
+
+---
+
 # PHASE 9: Integration Testing & Documentation
 
 1. TESTS:
