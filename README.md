@@ -588,6 +588,17 @@ Refresh every 5 seconds. Color-coded risk bars.
 
 install dependencies and run streamlit dashboard
 
+streamlit run regime-trader/streamlit_app.py
+
+### issue
+
+The issue is that you're running streamlit from the system's Python (base conda environment), not from the project's virtual environment. Run this command instead:
+.venv/bin/python -m streamlit run regime-trader/streamlit_app.py
+
+### install the dependencies
+
+.venv/bin/python -m pip install -r regime-trader/requirements.txt
+
 ---
 
 # PHASE 9: Integration Testing & Documentation

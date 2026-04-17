@@ -67,10 +67,11 @@ _REGIME_COLOURS = {
 # Alpaca client (cached across reruns)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @st.cache_resource(show_spinner="Connecting to Alpaca …")
 def _get_alpaca_client():
     from alpaca.trading.client import TradingClient
-    api_key    = os.environ.get("ALPACA_API_KEY", "")
+    api_key = os.environ.get("ALPACA_API_KEY", "")
     secret_key = os.environ.get("ALPACA_SECRET_KEY", "")
     if not api_key or not secret_key:
         return None
@@ -80,7 +81,7 @@ def _get_alpaca_client():
 @st.cache_resource(show_spinner="Connecting to data API …")
 def _get_data_client():
     from alpaca.data.historical import StockHistoricalDataClient
-    api_key    = os.environ.get("ALPACA_API_KEY", "")
+    api_key = os.environ.get("ALPACA_API_KEY", "")
     secret_key = os.environ.get("ALPACA_SECRET_KEY", "")
     if not api_key or not secret_key:
         return None
@@ -102,7 +103,8 @@ def fetch_account() -> dict:
         "cash":          float(acc.cash or 0),
         "buying_power":  float(acc.buying_power or 0),
         "long_value":    float(acc.long_market_value or 0),
-        "day_pl":        float(acc.unrealized_pl or 0),  # proxy for intraday P&L
+        # intraday P&L
+        "day_pl":        float((acc.equity or 0)) - float((acc.last_equity or 0)),
         "status":        str(acc.status),
         "pattern_day":   bool(acc.pattern_day_trader),
         "trading_blocked": bool(acc.trading_blocked),
@@ -116,10 +118,10 @@ def fetch_positions() -> pd.DataFrame:
         return pd.DataFrame()
     rows = []
     for p in client.get_all_positions():
-        qty   = float(p.qty or 0)
+        qty = float(p.qty or 0)
         entry = float(p.avg_entry_price or 0)
-        curr  = float(p.current_price or entry)
-        upnl  = float(p.unrealized_pl or 0)
+        curr = float(p.current_price or entry)
+        upnl = float(p.unrealized_pl or 0)
         upnlp = float(p.unrealized_plpc or 0)
         rows.append({
             "Symbol":    p.symbol,
@@ -178,7 +180,7 @@ def fetch_bars(symbol: str, days: int = 365) -> pd.DataFrame:
     dc = _get_data_client()
     if dc is None:
         return pd.DataFrame()
-    end   = pd.Timestamp.utcnow()
+    end = pd.Timestamp.utcnow()
     start = end - timedelta(days=days)
     req = StockBarsRequest(
         symbol_or_symbols=symbol,
@@ -286,14 +288,15 @@ tab_overview, tab_regime, tab_positions, tab_orders, tab_backtest = st.tabs([
 with tab_overview:
     acc = fetch_account()
     if not acc:
-        st.error("Could not connect to Alpaca. Check ALPACA_API_KEY and ALPACA_SECRET_KEY in .env")
+        st.error(
+            "Could not connect to Alpaca. Check ALPACA_API_KEY and ALPACA_SECRET_KEY in .env")
         st.stop()
 
-    equity  = acc["equity"]
-    cash    = acc["cash"]
-    day_pl  = acc["day_pl"]
+    equity = acc["equity"]
+    cash = acc["cash"]
+    day_pl = acc["day_pl"]
     day_pct = day_pl / (equity - day_pl) * 100 if equity > day_pl else 0.0
-    pl_col  = "normal" if day_pl >= 0 else "inverse"
+    pl_col = "normal" if day_pl >= 0 else "inverse"
 
     # ── KPI row ─────────────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
@@ -311,7 +314,7 @@ with tab_overview:
     with col_chart:
         st.subheader(f"{primary} — Price & Regime")
         regime_df = compute_regime(primary, lookback_days)
-        bars      = fetch_bars(primary, lookback_days)
+        bars = fetch_bars(primary, lookback_days)
 
         if not bars.empty:
             fig = go.Figure()
@@ -324,7 +327,8 @@ with tab_overview:
                         if prev_regime is not None:
                             fig.add_vrect(
                                 x0=seg_start, x1=ts,
-                                fillcolor=_REGIME_COLOURS.get(prev_regime, "#444"),
+                                fillcolor=_REGIME_COLOURS.get(
+                                    prev_regime, "#444"),
                                 opacity=0.10, layer="below", line_width=0,
                             )
                         seg_start = ts
@@ -351,7 +355,7 @@ with tab_overview:
         if not regime_df.empty:
             latest = regime_df.iloc[-1]
             rlabel = latest["regime"]
-            rconf  = latest["confidence"]
+            rconf = latest["confidence"]
             rcolour = _REGIME_COLOURS.get(rlabel, "#aaa")
 
             st.markdown(
@@ -366,7 +370,8 @@ with tab_overview:
             # Regime distribution pie
             counts = regime_df["regime"].value_counts().reset_index()
             counts.columns = ["Regime", "Bars"]
-            colour_seq = [_REGIME_COLOURS.get(r, "#888") for r in counts["Regime"]]
+            colour_seq = [_REGIME_COLOURS.get(
+                r, "#888") for r in counts["Regime"]]
             fig2 = px.pie(
                 counts, values="Bars", names="Regime",
                 color_discrete_sequence=colour_seq,
@@ -389,7 +394,8 @@ with tab_overview:
 
     def _gauge(label, value_pct, limit_pct, warn=0.6, crit=0.9):
         ratio = value_pct / limit_pct if limit_pct > 0 else 0
-        bar_color = "#00cc66" if ratio < warn else ("#ffaa00" if ratio < crit else "#ff3333")
+        bar_color = "#00cc66" if ratio < warn else (
+            "#ffaa00" if ratio < crit else "#ff3333")
         icon = "✅" if ratio < warn else ("⚠️" if ratio < crit else "🔴")
         bar_w = min(ratio * 100, 100)
         st.markdown(
@@ -478,10 +484,13 @@ with tab_regime:
                 common = daily_ret.index.intersection(r_idx)
                 r_rets = daily_ret.loc[common]
                 avg_ret = float(r_rets.mean() * 100) if len(r_rets) else 0.0
-                vol     = float(r_rets.std() * np.sqrt(252) * 100) if len(r_rets) > 1 else 0.0
-                sharpe  = float(r_rets.mean() / r_rets.std() * np.sqrt(252)) if len(r_rets) > 1 and r_rets.std() > 0 else 0.0
+                vol = float(r_rets.std() * np.sqrt(252) *
+                            100) if len(r_rets) > 1 else 0.0
+                sharpe = float(r_rets.mean() / r_rets.std() * np.sqrt(252)
+                               ) if len(r_rets) > 1 and r_rets.std() > 0 else 0.0
                 pct_time = mask.sum() / len(regime_df) * 100
-                avg_conf = float(regime_df.loc[mask, "confidence"].mean()) * 100
+                avg_conf = float(
+                    regime_df.loc[mask, "confidence"].mean()) * 100
                 stats_rows.append({
                     "Regime":      r,
                     "% Time":      f"{pct_time:.1f}%",
@@ -491,17 +500,20 @@ with tab_regime:
                     "Avg Conf":    f"{avg_conf:.1f}%",
                     "Bars":        int(mask.sum()),
                 })
-            stats_df = pd.DataFrame(stats_rows).sort_values("Bars", ascending=False)
+            stats_df = pd.DataFrame(stats_rows).sort_values(
+                "Bars", ascending=False)
             st.dataframe(stats_df, use_container_width=True, hide_index=True)
 
         # ── Flicker rate ─────────────────────────────────────────────────
         st.markdown("**Regime Transitions (rolling 20 bars)**")
-        transitions = (regime_df["regime"] != regime_df["regime"].shift(1)).astype(int)
+        transitions = (regime_df["regime"] !=
+                       regime_df["regime"].shift(1)).astype(int)
         rolling_flicker = transitions.rolling(20).sum()
         fig_flk = go.Figure(go.Bar(
             x=rolling_flicker.index,
             y=rolling_flicker.values,
-            marker_color=["#ff4444" if v > 4 else "#00cc66" for v in rolling_flicker.values],
+            marker_color=["#ff4444" if v >
+                          4 else "#00cc66" for v in rolling_flicker.values],
         ))
         fig_flk.add_hline(y=4, line_dash="dash", line_color="#ffaa00",
                           annotation_text="flicker threshold", annotation_position="bottom right")
@@ -530,7 +542,7 @@ with tab_positions:
             colour = "#00cc66" if val >= 0 else "#ff4444"
             return f"color: {colour}"
 
-        styled = pos_df.style.applymap(_colour_pnl, subset=["Unreal P&L", "P&L %"])
+        styled = pos_df.style.map(_colour_pnl, subset=["Unreal P&L", "P&L %"])
         st.dataframe(styled, use_container_width=True, hide_index=True)
 
         st.divider()
@@ -558,7 +570,8 @@ with tab_positions:
 with tab_orders:
     st.subheader("Recent Orders")
 
-    n_orders = st.slider("Show last N orders", 10, 200, 50, step=10, key="order_slider")
+    n_orders = st.slider("Show last N orders", 10, 200,
+                         50, step=10, key="order_slider")
     orders_df = fetch_orders(n_orders)
 
     if orders_df.empty:
@@ -597,17 +610,19 @@ with tab_orders:
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_backtest:
     st.subheader("Walk-Forward Backtest")
-    st.caption("Fetches 5yr daily data, runs the full walk-forward backtester, displays results inline.")
+    st.caption(
+        "Fetches 5yr daily data, runs the full walk-forward backtester, displays results inline.")
 
     with st.expander("Backtest configuration", expanded=True):
         bc1, bc2, bc3 = st.columns(3)
-        bt_capital  = bc1.number_input("Initial capital ($)", value=100_000, step=10_000)
-        bt_train    = bc2.slider("Train window (bars)", 126, 504, 252, step=63)
-        bt_test     = bc3.slider("Test window (bars)", 63, 252, 126, step=63)
+        bt_capital = bc1.number_input(
+            "Initial capital ($)", value=100_000, step=10_000)
+        bt_train = bc2.slider("Train window (bars)", 126, 504, 252, step=63)
+        bt_test = bc3.slider("Test window (bars)", 63, 252, 126, step=63)
 
         bc4, bc5 = st.columns(2)
-        bt_symbols  = bc4.multiselect("Symbols", symbols, default=[primary])
-        bt_slip     = bc5.number_input("Slippage (bps)", value=5, step=1)
+        bt_symbols = bc4.multiselect("Symbols", symbols, default=[primary])
+        bt_slip = bc5.number_input("Slippage (bps)", value=5, step=1)
 
     run_bt = st.button("▶  Run Backtest", type="primary")
 
@@ -634,7 +649,7 @@ with tab_backtest:
 
                     from alpaca.data.requests import StockBarsRequest
                     from alpaca.data.timeframe import TimeFrame
-                    end_   = pd.Timestamp.utcnow()
+                    end_ = pd.Timestamp.utcnow()
                     start_ = end_ - timedelta(days=365 * 5)
                     for sym_ in bt_symbols:
                         req_ = StockBarsRequest(
@@ -646,7 +661,8 @@ with tab_backtest:
                         )
                         df_ = dc.get_stock_bars(req_)[sym_].df
                         df_.index = pd.to_datetime(df_.index, utc=True)
-                        bars_by_sym[sym_] = df_[["open", "high", "low", "close", "volume"]].copy()
+                        bars_by_sym[sym_] = df_[
+                            ["open", "high", "low", "close", "volume"]].copy()
 
                     bt_cfg = BacktestConfig(
                         initial_capital=bt_capital,
@@ -661,7 +677,8 @@ with tab_backtest:
 
                     analyser = PerformanceAnalyser()
                     benchmark = bars_by_sym.get(bt_symbols[0])
-                    report = analyser.analyse(result, benchmark_ohlcv=benchmark)
+                    report = analyser.analyse(
+                        result, benchmark_ohlcv=benchmark)
 
                     # ── KPI metrics ──────────────────────────────────────
                     st.divider()
@@ -676,7 +693,7 @@ with tab_backtest:
                     k6, k7, k8, k9, k10 = st.columns(5)
                     k6.metric("Sortino",      f"{c.sortino:.3f}")
                     k7.metric("Calmar",       f"{c.calmar:.3f}")
-                    k8.metric("Profit Factor",f"{c.profit_factor:.3f}")
+                    k8.metric("Profit Factor", f"{c.profit_factor:.3f}")
                     k9.metric("Worst Day",    f"{c.worst_day_pct:.2f}%")
                     k10.metric("N Trades",    str(c.n_trades))
 
@@ -684,10 +701,14 @@ with tab_backtest:
                     st.markdown("**Equity Curve**")
                     eq = result.equity_curve
                     if not eq.empty and benchmark is not None:
-                        bah = bt_capital * benchmark["close"].reindex(eq.index).ffill() / benchmark["close"].iloc[0]
+                        bah = bt_capital * \
+                            benchmark["close"].reindex(
+                                eq.index).ffill() / benchmark["close"].iloc[0]
                         fig_eq = go.Figure()
-                        fig_eq.add_trace(go.Scatter(x=eq.index, y=eq.values, name="Strategy", line=dict(color="#4da6ff", width=2)))
-                        fig_eq.add_trace(go.Scatter(x=bah.index, y=bah.values, name="Buy & Hold", line=dict(color="#aaaaaa", width=1, dash="dash")))
+                        fig_eq.add_trace(go.Scatter(
+                            x=eq.index, y=eq.values, name="Strategy", line=dict(color="#4da6ff", width=2)))
+                        fig_eq.add_trace(go.Scatter(x=bah.index, y=bah.values, name="Buy & Hold", line=dict(
+                            color="#aaaaaa", width=1, dash="dash")))
                         fig_eq.update_layout(
                             height=380, margin=dict(l=0, r=0, t=10, b=0),
                             yaxis_title="Equity ($)", xaxis_title=None,
@@ -730,7 +751,8 @@ with tab_backtest:
                                 "Sharpe": f"{b.sharpe:.3f}",
                                 "Max DD": f"{b.max_drawdown_pct:.2f}%",
                             })
-                        st.dataframe(pd.DataFrame(bm_rows), use_container_width=True, hide_index=True)
+                        st.dataframe(pd.DataFrame(bm_rows),
+                                     use_container_width=True, hide_index=True)
 
                     # ── Regime breakdown ──────────────────────────────────
                     if report.regime_breakdown:
@@ -744,7 +766,8 @@ with tab_backtest:
                             "Trades":       r.n_trades,
                             "Win %":        f"{r.win_rate_pct:.1f}%",
                         } for r in report.regime_breakdown])
-                        st.dataframe(rb, use_container_width=True, hide_index=True)
+                        st.dataframe(rb, use_container_width=True,
+                                     hide_index=True)
 
                 except Exception as exc:
                     st.error(f"Backtest failed: {exc}")
