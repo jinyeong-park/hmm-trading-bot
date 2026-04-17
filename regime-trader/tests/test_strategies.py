@@ -35,8 +35,10 @@ class TestAllocationByRegime:
     def test_low_vol_full_allocation(self):
         strategy = RegimeStrategy(low_vol_allocation=0.95, min_confidence=0.55)
         result = _make_regime_result(Regime.LOW_VOL, confidence=0.80)
-        with pytest.raises(NotImplementedError):
-            strategy.get_allocation(result, trend_signal=True)
+        decision = strategy.get_allocation(result, trend_signal=True)
+        assert decision.allocation_fraction == 0.95
+        assert decision.leverage == 1.25
+        assert not decision.confidence_scaled
 
     def test_mid_vol_with_trend(self):
         pytest.skip("Requires implementation")
@@ -63,8 +65,10 @@ class TestConfidenceScaling:
     def test_low_confidence_scales_down(self):
         strategy = RegimeStrategy(uncertainty_size_mult=0.50, min_confidence=0.55)
         result = _make_regime_result(Regime.LOW_VOL, confidence=0.50)
-        with pytest.raises(NotImplementedError):
-            strategy.get_allocation(result)
+        decision = strategy.get_allocation(result)
+        assert decision.confidence_scaled
+        assert decision.leverage == 1.0
+        assert decision.allocation_fraction == round(0.95 * 0.50, 4)
 
     def test_high_confidence_no_scaling(self):
         pytest.skip("Requires implementation")
@@ -73,8 +77,10 @@ class TestConfidenceScaling:
 class TestRebalanceThreshold:
     def test_within_threshold_no_rebalance(self):
         strategy = RegimeStrategy(rebalance_threshold=0.10)
-        with pytest.raises(NotImplementedError):
-            strategy.needs_rebalance(current_weight=0.90, target_weight=0.95)
+        # |0.90 - 0.95| = 0.05 < 0.10 → no rebalance
+        assert strategy.needs_rebalance(current_weight=0.90, target_weight=0.95) is False
+        # |0.80 - 0.95| = 0.15 > 0.10 → rebalance needed
+        assert strategy.needs_rebalance(current_weight=0.80, target_weight=0.95) is True
 
     def test_beyond_threshold_triggers_rebalance(self):
         pytest.skip("Requires implementation")

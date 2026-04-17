@@ -37,7 +37,7 @@ class TestHMMEngineFit:
         short_features = pd.DataFrame(
             np.random.randn(100, 3), columns=["f1", "f2", "f3"]
         )
-        with pytest.raises((ValueError, NotImplementedError)):
+        with pytest.raises(ValueError, match="252"):
             engine.fit(short_features)
 
     def test_fit_returns_self(self):
