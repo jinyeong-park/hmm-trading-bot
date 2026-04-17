@@ -1,0 +1,99 @@
+# ============================================================
+# regime-trader — Master Configuration
+# ============================================================
+
+# ------------------------------------------------------------
+# Broker / Execution
+# ------------------------------------------------------------
+broker:
+  paper_trading: true                  # true = Alpaca paper, false = live
+  symbols:
+    - SPY
+    - QQQ
+    - AAPL
+    - MSFT
+    - AMZN
+    - GOOGL
+    - NVDA
+    - META
+    - TSLA
+    - AMD
+  timeframe: "1Day"                    # Alpaca bar timeframe (1Min, 5Min, 1Hour, 1Day)
+  base_url_paper: "https://paper-api.alpaca.markets"
+  base_url_live:  "https://api.alpaca.markets"
+  data_url: "https://data.alpaca.markets"
+
+# ------------------------------------------------------------
+# HMM Regime Detection
+# ------------------------------------------------------------
+hmm:
+  n_candidates: [3, 4, 5, 6, 7]       # State counts to try; best chosen by BIC/AIC
+  n_init: 10                           # Random restarts per candidate (avoids local optima)
+  covariance_type: "full"              # full | diag | spherical | tied
+  min_train_bars: 252                  # Minimum bars required before fitting (≈1 trading year)
+  stability_bars: 3                    # Consecutive bars a regime must persist to be confirmed
+  flicker_window: 20                   # Rolling window to count regime transitions
+  flicker_threshold: 4                 # Max transitions in flicker_window before dampening
+  min_confidence: 0.55                 # Minimum posterior probability to act on a regime signal
+
+# ------------------------------------------------------------
+# Regime-Based Allocation Strategy
+# ------------------------------------------------------------
+strategy:
+  # Allocation fractions of available capital per regime
+  low_vol_allocation: 0.95             # Low-vol / bull regime: nearly fully invested
+  mid_vol_allocation_trend: 0.95       # Mid-vol with uptrend: stay mostly invested
+  mid_vol_allocation_no_trend: 0.60    # Mid-vol no clear trend: reduce exposure
+  high_vol_allocation: 0.60           # High-vol / bear regime: defensive posture
+
+  # Leverage multipliers applied on top of allocation
+  low_vol_leverage: 1.25               # Allow modest leverage in calm markets
+  # Note: mid and high-vol regimes use leverage = 1.0 (no leverage)
+
+  rebalance_threshold: 0.10            # Drift tolerance before forcing rebalance (fraction)
+  uncertainty_size_mult: 0.50          # Position size multiplier when regime confidence is low
+
+# ------------------------------------------------------------
+# Risk Management
+# ------------------------------------------------------------
+risk:
+  # Per-trade limits
+  max_risk_per_trade: 0.01             # Max fraction of equity risked on a single trade (1%)
+  max_single_position: 0.15           # Max single-asset weight in portfolio (15%)
+  max_concurrent: 5                    # Maximum simultaneous open positions
+
+  # Portfolio-level limits
+  max_exposure: 0.80                   # Max gross exposure as fraction of equity
+  max_leverage: 1.25                   # Hard leverage ceiling (matches low_vol_leverage)
+
+  # Intraday / daily throttles
+  max_daily_trades: 20                 # Hard stop on order count per calendar day
+
+  # Drawdown circuit breakers
+  daily_dd_reduce: 0.02                # Daily drawdown threshold → reduce position sizes 50%
+  daily_dd_halt: 0.03                  # Daily drawdown threshold → halt all new entries today
+  weekly_dd_reduce: 0.05               # Weekly drawdown threshold → reduce sizes
+  weekly_dd_halt: 0.07                 # Weekly drawdown threshold → halt entries for the week
+  max_dd_from_peak: 0.10               # Rolling peak-to-trough drawdown limit → full halt
+
+# ------------------------------------------------------------
+# Backtesting
+# ------------------------------------------------------------
+backtest:
+  slippage_pct: 0.0005                 # One-way slippage as fraction of price (5 bps)
+  initial_capital: 100000              # Starting portfolio value in USD
+  train_window: 252                    # Walk-forward training window in bars (≈1 year)
+  test_window: 126                     # Walk-forward out-of-sample window in bars (≈6 months)
+  step_size: 126                       # Walk-forward step between folds in bars
+  risk_free_rate: 0.045                # Annual risk-free rate for Sharpe/Sortino calculation
+
+# ------------------------------------------------------------
+# Monitoring & Alerts
+# ------------------------------------------------------------
+monitoring:
+  dashboard_refresh_seconds: 5         # Terminal dashboard refresh interval
+  alert_rate_limit_minutes: 15         # Minimum gap between repeated alerts for same event
+  log_level: "INFO"                    # DEBUG | INFO | WARNING | ERROR
+  log_dir: "logs/"
+  log_rotation_mb: 10                  # Rotate log file when it exceeds this size (MB)
+  log_backup_count: 5                  # Number of rotated log files to retain

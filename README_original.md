@@ -144,19 +144,9 @@ DO NOT use model.predict(). predict() runs the Viterbi algorithm which processes
 
 INSTEAD implement FORWARD ALGORITHM ONLY (filtered inference):
 
-def predict_regime_filtered(self, features_up_to_now):
-"""
+def predict*regime_filtered(self, features_up_to_now):
 Compute P(state_t | observations_1:t) using forward algorithm.
-Uses ONLY past and present data. No future data.
-"""
-
-    # Use model's startprob*, transmat*, means*, covars*
-    # Implement forward pass manually:
-    # 1. alpha_0 = startprob \* emission_prob(obs_0)
-    # 2. alpha_t = (alpha\*{t-1} @ transmat) \* emission_prob(obs_t)
-    # 3. Normalize at each step (work in log space)
-    # 4. alpha_T = filtered distribution at current time
-    # Cache previous alpha for efficiency in live/backtest loop
+Uses ONLY past and present data. No future data. # Use model's startprob*, transmat*, means*, covars* # Implement forward pass manually: # 1. alpha_0 = startprob \* emission_prob(obs_0) # 2. alpha_t = (alpha*{t-1} @ transmat) \* emission_prob(obs_t) # 3. Normalize at each step (work in log space) # 4. alpha_T = filtered distribution at current time # Cache previous alpha for efficiency in live/backtest loop
 
 MANDATORY TEST — tests/test_look_ahead.py:
 
