@@ -59,7 +59,8 @@ class AlpacaClient:
     def __init__(self, paper: Optional[bool] = None) -> None:
         self.paper = paper
         self._trading_client: Any = None    # alpaca.trading.client.TradingClient
-        self._data_client: Any = None       # alpaca.data.historical.StockHistoricalDataClient
+        # alpaca.data.historical.StockHistoricalDataClient
+        self._data_client: Any = None
         self._trading_stream: Any = None    # alpaca.trading.stream.TradingStream
         self._data_stream: Any = None       # alpaca.data.live.StockDataStream
         self._stream_thread: Optional[threading.Thread] = None
@@ -133,7 +134,8 @@ class AlpacaClient:
 
     def _check_connected(self) -> None:
         if not self._is_connected:
-            raise RuntimeError("AlpacaClient not connected — call connect() first")
+            raise RuntimeError(
+                "AlpacaClient not connected — call connect() first")
 
     # ------------------------------------------------------------------
     # Account & market status
@@ -310,14 +312,21 @@ class AlpacaClient:
         result: dict[str, pd.DataFrame] = {}
         for sym in symbols:
             try:
-                df = raw[sym].df
-                df.index = pd.to_datetime(df.index, utc=True)
+                df = raw.df
+                # Handle MultiIndex from Alpaca API
+                if isinstance(df.index, pd.MultiIndex):
+                    df = df.reset_index()
+                    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+                    df = df.set_index('timestamp')
+                else:
+                    df.index = pd.to_datetime(df.index, utc=True)
                 df.index.name = "timestamp"
                 df = df[["open", "high", "low", "close", "volume"]].copy()
                 df.columns = ["open", "high", "low", "close", "volume"]
                 result[sym] = df.sort_index()
             except (KeyError, AttributeError):
-                logger.warning("No bars returned for %s in [%s, %s]", sym, start, end)
+                logger.warning(
+                    "No bars returned for %s in [%s, %s]", sym, start, end)
                 result[sym] = pd.DataFrame(
                     columns=["open", "high", "low", "close", "volume"]
                 )
@@ -355,7 +364,8 @@ class AlpacaClient:
             raise ImportError("alpaca-py not installed") from exc
 
         req = StockLatestQuoteRequest(symbol_or_symbols=symbol)
-        raw = self._retry_request(self._data_client.get_stock_latest_quote, req)
+        raw = self._retry_request(
+            self._data_client.get_stock_latest_quote, req)
         q = raw.get(symbol)
         if q is None:
             return None
@@ -486,7 +496,8 @@ class AlpacaClient:
     def start_stream(self) -> None:
         """Start the WebSocket data stream in a daemon thread."""
         if self._data_stream is None:
-            logger.warning("No subscriptions registered — call subscribe_bars() first")
+            logger.warning(
+                "No subscriptions registered — call subscribe_bars() first")
             return
         if self._stream_thread is not None and self._stream_thread.is_alive():
             return
@@ -612,7 +623,8 @@ class AlpacaClient:
                 return func(*args, **kwargs)
             except Exception as exc:
                 last_exc = exc
-                status = getattr(getattr(exc, "response", None), "status_code", None)
+                status = getattr(
+                    getattr(exc, "response", None), "status_code", None)
                 is_retryable = (
                     status in _RETRYABLE_STATUS
                     or "timeout" in str(exc).lower()

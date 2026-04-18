@@ -593,12 +593,17 @@ class PerformanceAnalyser:
                 cur = 0
         return max_consec
 
-    def _trades_to_df(self, trades: list) -> pd.DataFrame:
-        """Convert list of TradeRecord to DataFrame, add pnl_pct if possible."""
-        if not trades:
-            return pd.DataFrame()
-        records = [t.__dict__ if hasattr(t, "__dict__") else dict(t) for t in trades]
-        df = pd.DataFrame(records)
+    def _trades_to_df(self, trades) -> pd.DataFrame:
+        """Convert list of TradeRecord (or an existing DataFrame) to DataFrame, add pnl_pct if possible."""
+        if isinstance(trades, pd.DataFrame):
+            if trades.empty:
+                return pd.DataFrame()
+            df = trades.copy()
+        else:
+            if not trades:
+                return pd.DataFrame()
+            records = [t.__dict__ if hasattr(t, "__dict__") else dict(t) for t in trades]
+            df = pd.DataFrame(records)
 
         # Compute PnL% by pairing buys and sells on same symbol
         if "side" in df.columns and "exec_price" in df.columns and "symbol" in df.columns:
