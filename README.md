@@ -2,6 +2,8 @@
 
 A volatility-aware systematic trading system using Hidden Markov Models for regime detection, with strict risk management and Alpaca integration.
 
+![dashboard](screenshot/dashboard1.png)
+
 ---
 
 ## Phase 1: Project Structure & Environment Setup
